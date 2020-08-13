@@ -1,0 +1,11 @@
+{
+  "name": "pointofview",
+  "version": "1.0.0",
+  "description": "Site for Match Charting Project v2",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Aneesh Kodali",
+  "license": "ISC"
+}
