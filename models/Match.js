@@ -18,13 +18,14 @@ const MatchSchema = new Schema({
 
     title: String,
     result: String,
-    surface: String,
 
     winner: String,
     loser: String,
     score: String,
-
     sets: Number,
+
+    surface: String,
+
 
     points: Array
     

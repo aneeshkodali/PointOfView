@@ -15,6 +15,8 @@ function getMatchData(link) {
 	matchData['round'] = linkParsed[3];
 	matchData['player1'] = linkParsed[4].replace('_',' ');
     matchData['player2'] = linkParsed[5].replace('.html','').replace('_',' ');
+
+    const players = [matchData['player1'], matchData['player2']];
     
 
     axios.get(link)
@@ -28,25 +30,39 @@ function getMatchData(link) {
         // result
         const result = $('body table:nth-child(3) tbody tr td b').html();
         matchData['result'] = result;
+
+        // winner
+        const winner = result.split(' d.')[0];
+        matchData['winner'] = winner;
+
+        // loser
+        const loser = winner === players[0] ? players[1] : players[0];
+        matchData['loser'] = loser;
+
+        // score
+        const score = result.split(`${loser} `)[1];
+        matchData['score'] = score;
+
+        // sets
+        const sets = score.split(' ').length;
+        matchData['sets'] = sets;
         
         // surface
-        let surface = $('body table:nth-child(3) tbody tr td p:nth-child(4) table tbody tr td').text().split('matches on')[1].split(',')[0];
+        const surface = $('body table:nth-child(3) tbody tr td p:nth-child(4) table tbody tr td').text().split('matches on')[1].split(',')[0];
         matchData['surface'] = surface;
+
+        // points
+        //const points = eval($.html().split('var pointlog = ')[1].split(";\n")[0]);
+        const points = $('script')[2].length;
+        console.log(points);
+
+        //console.log(matchData);
     
     })
     .catch(err => console.log(err));
 
-    return matchData;
+    //return matchData;
 }
 const matchLink = 'http://www.tennisabstract.com/charting/20190714-M-Wimbledon-F-Roger_Federer-Novak_Djokovic.html';
-//const matchData = getMatchData(matchLink);
-//console.log(matchData);
 
-
-async function fetchHTML(url) {
-    const { data } = await axios.get(url);
-    return cheerio.load(data);
-};
-
-const $ = fetchHTML(matchLink);
-console.log($.html());
+console.log(getMatchData(matchLink));
