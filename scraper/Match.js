@@ -28,9 +28,11 @@ function getMatchData(link) {
     // Initialize object for match data
     const matchObj = {};
     matchObj['link'] = link
+    const suffix = link.split('charting/')[1];
+    matchObj['suffix'] = suffix;
 
     // Parse Link
-    const linkParsed = link.split('charting/')[1].split('-');
+    const linkParsed = suffix.split('-');
     
     // date
     const date = linkParsed[0];
@@ -94,38 +96,52 @@ function getMatchData(link) {
 
         //// POINTS
         const pointArr = [];
-        //const pointlog = $.html().split('var pointlog = ')[1].split(";\n")[0];
-        //const pointData = cheerio.load(pointlog);
-        //pointData('tbody tr').slice(1).each((index, tr) => {
-        //    let pointObj = {};
+        const pointlog = $.html().split('var pointlog = ')[1].split(";\n")[0];
+        const pointData = cheerio.load(pointlog);
+        let pointNumber=1;
+        pointData('tbody tr').slice(1).each((index, tr) => {
 
-        //    // point number
-        //    const pointNumber = index+1;
-        //    pointObj['pointNumber'] = pointNumber;
+            const server = unidecode($(pointData(tr).find('td')[0]).text().trim());
+            if (server === '') {
+                return;
+            }
+            let pointObj = {};
 
-        //    // server
-        //    const server = unidecode($(pointData(tr).find('td')[0]).text().trim());
-        //    pointObj['server'] = server;
+            // point number
+            pointObj['pointNumber'] = pointNumber;
+            pointNumber++;
 
-        //    // receiver - dependent on server
-        //    const receiver = server === player1 ? player2 : player1;
-        //    pointObj['receiver'] = receiver;
+            // server
+            pointObj['server'] = server;
 
-        //    // set score
-        //    const setScore = unidecode($(pointData(tr).find('td')[1]).text());
-        //    pointObj['setScore'] = setScore;
+            // receiver - dependent on server
+            const receiver = server === player1 ? player2 : player1;
+            pointObj['receiver'] = receiver;
 
-        //    // game score
-        //    const gameScore = unidecode($(pointData(tr).find('td')[2]).text());
-        //    pointObj['gameScore'] = gameScore
+            // set score
+            const setScore = unidecode($(pointData(tr).find('td')[1]).text().trim());
+            pointObj['setScore'] = setScore;
+            //const setScoreSplit = setScore.split('-').map(score => Number(score));
+            //const setScoreServer = setScoreSplit[0];
+            //pointObj['setScoreServer'] = setScoreServer;
+            //const setScoreReceiver = setScoreSplit[1];
+            //pointObj['setScoreReceiver'] = setScoreReceiver;
+            //const setScorePlayer1 = server === player1 ? setScoreServer : setScoreReceiver;
+            //pointObj['setScorePlayer1'] = setScorePlayer1;
+            //const setScorePlayer2 = server === player1 ? setScoreReceiver : setScoreServer;
+            //pointObj['setScorePlayer2'] = setScorePlayer2;
+            
+            // game score
+            const gameScore = unidecode($(pointData(tr).find('td')[2]).text());
+            pointObj['gameScore'] = gameScore
 
-        //    // point score
-        //    const pointScore = unidecode($(pointData(tr).find('td')[3]).text());
-        //    pointObj['pointScore'] = pointScore;
+            // point score
+            const pointScore = unidecode($(pointData(tr).find('td')[3]).text());
+            pointObj['pointScore'] = pointScore;
 
-        //    // side - function of point score
-        //    const side = getSide(pointScore);
-        //    pointObj['side'] = side
+            // side - function of point score
+            const side = getSide(pointScore);
+            pointObj['side'] = side
 
 
             //let rallyData = $(pointData(tr).find('td')[4]);
@@ -254,11 +270,11 @@ function getMatchData(link) {
             //pointObj['shots'] = shotArr;
 
         
-        //    pointArr.push(pointObj);
+            pointArr.push(pointObj);
         
    
-        //});
-        //matchObj['points'] = pointArr;
+        });
+        matchObj['points'] = pointArr;
         //console.log(matchData.points[0]);
 
         return matchObj;
@@ -287,18 +303,18 @@ function getMatchData(link) {
 //})
 
 //let link = 'http://www.tennisabstract.com/charting/20150610-M-s%C2%A0Hertogenbosch-R16-Vasek_Pospisil-Gilles_Muller.html';
-let link = 'http://www.tennisabstract.com/charting/20190919-M-St_Petersburg-R16-Evgeny_Donskoy-Daniil_Medvedev.html'; 
-getMatchData(link)
-.then(matchData => {
-    const newMatch = new Match(matchData);
-    newMatch.save((error) => {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Added match');
-        }
-    })
-})
+//let link = 'http://www.tennisabstract.com/charting/20190919-M-St_Petersburg-R16-Evgeny_Donskoy-Daniil_Medvedev.html'; 
+//getMatchData(link)
+//.then(matchData => {
+//    const newMatch = new Match(matchData);
+//    newMatch.save((error) => {
+//        if (error) {
+//            console.log(error);
+//        } else {
+//            console.log('Added match');
+//        }
+//    })
+//})
 
 //matchesSite()
 //.then(matches => {
@@ -345,4 +361,8 @@ function getSide(pointScore) {
     
 	return side
 
+}
+
+module.exports = {
+    getMatchData
 }

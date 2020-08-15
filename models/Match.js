@@ -2,7 +2,12 @@ const mongoose = require('mongoose');
 
 // Create Schema
 const MatchSchema = new mongoose.Schema({
-    link: String,
+    link: {
+        type: String,
+        unique: true,
+        required: true
+    },
+    suffix: String,
     date: Date,
     gender: String,
     tournament: String,
@@ -18,10 +23,9 @@ const MatchSchema = new mongoose.Schema({
     score: String,
     sets: Number,
 
-    surface: String
+    surface: String,
 
-
-    //points: Array
+    points: Array
     
 });
 
