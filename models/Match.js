@@ -1,14 +1,8 @@
 const mongoose = require('mongoose');
 
-const Schema = mongoose.Schema;
-
 // Create Schema
-const MatchSchema = new Schema({
-    link: {
-        type: String,
-        required: true,
-        unique: true
-    },
+const MatchSchema = new mongoose.Schema({
+    link: String,
     date: Date,
     gender: String,
     tournament: String,
@@ -24,10 +18,10 @@ const MatchSchema = new Schema({
     score: String,
     sets: Number,
 
-    surface: String,
+    surface: String
 
 
-    points: Array
+    //points: Array
     
 });
 
@@ -36,3 +30,4 @@ const Match = mongoose.model("Match", MatchSchema);
 
 // export schema
 module.exports = Match;
+
