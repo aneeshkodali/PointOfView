@@ -12,7 +12,7 @@ const matchesDB = require('../../scraper/Match').matchesDB;
 
 // GET api/matches - get all matches
 router.get('/', (req, res) => {
-    Match.find()
+    Match.find({}, {'_id': 0, 'link': 1})
     .sort({date: -1})
     .then(matches => res.json(matches));
 });
