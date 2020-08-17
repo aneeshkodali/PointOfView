@@ -4,6 +4,8 @@ const unidecode = require('unidecode');
 
 const Match = require('../models/Match');
 
+// bad link: http://www.tennisabstract.com/charting/20150610-M-s%C2%A0Hertogenbosch-R16-Vasek_Pospisil-Gilles_Muller.html
+
 // Get matches from site
 const matchesSite = function(url='http://www.tennisabstract.com/charting/') {
     // initialize array
@@ -21,6 +23,16 @@ const matchesSite = function(url='http://www.tennisabstract.com/charting/') {
         return matchArr;
     });
 };
+
+// get matches from db
+const matchesDB = function() {
+    const matchArr = [];
+    Match.find({}, {'_id': 0, 'link': 1}, function(err, matches) {
+        matches.forEach(match => matchArr.push(match))
+    });
+    return matchArr;
+
+}
 
 
 function getMatchData(link) {
@@ -60,10 +72,14 @@ function getMatchData(link) {
     matchObj['player2'] = player2;
 
     const players = [player1, player2];
+
+    ['title', 'result', 'winner', 'loser', 'score', 'sets', 'surface'].forEach(key => matchObj[key] = '');
+    matchObj['points'] = [];
     
 
     return axios.get(link)
     .then(res => {
+
         let $ = cheerio.load(res.data);
     
         // title
@@ -164,24 +180,25 @@ function getMatchData(link) {
             pointObj['pointInGame'] = pointInGame;
             pointInGame++;
             
-
-            
-
             // side - function of point score
             const side = getSide(pointScore);
             pointObj['side'] = side
 
 
             let rallyData = $(pointData(tr).find('td')[4]);
-            let rallyArr = rallyData.text().split(';').map(shot => shot.trim());
-            
-            // number of shots
-            const numberOfShots = rallyArr.length;
-            pointObj['numberOfShots'] = numberOfShots;
 
             // result
             const result = rallyData.find('b').text().trim();
             pointObj['result'] = result;
+
+            let regexp = new RegExp(`,\\s{1,2}${result}`);
+            let rallyArr = rallyData.text().split(regexp)[0].split(';').map(shot => shot.trim());
+
+
+            // number of shots
+            const numberOfShots = rallyArr.length;
+            pointObj['numberOfShots'] = numberOfShots;
+
 
             const loseList = ['unforced error', 'forced error', 'double fault'];
             const winList = ['winner', 'ace', 'service winner'];
@@ -210,10 +227,10 @@ function getMatchData(link) {
             pointObj['loser'] = loser;
 
 
-            //// SHOTS
+            // SHOTS
 
             const locationArr = ['down the T', 'to body', 'wide', 'down the middle', 'crosscourt', 'inside-out', 'down the line', 'inside-in'];
-            const splitPattern = locationArr.join('|');
+            //const splitPattern = locationArr.join('|');
 
 
 
@@ -221,46 +238,19 @@ function getMatchData(link) {
             let shotByArr = rangeArr.map(num => num%2!==0 ? server : receiver);
             let resultArr = rangeArr.map(num => num===numberOfShots ? result : 'none');
 
-
-            // Check if there is a 2nd serve
+            // check for 2nd serve
             let serveElement = rallyArr[0];
-            let firstServe;
-            let secondServe;
-            if (serveElement.includes('.')) {
-                let serves = serveElement.split('.');
-                firstServe = serves[0];
-                secondServe = [serves[1]];
-                rangeArr.splice(0, 0, 1);
-            } else {
-                firstServe = serveElement;
-                secondServe = [];
-            };
-        
-            //Check if 1st serve is fault
-            let firstServeElement;
-            let firstServeResult;
-            if (secondServe !== []) {
-           
-                let firstServeArr = firstServe.split(',');
-                firstServeElement = firstServeArr[0];
-                //firstServeResult = [firstServeArr[1].trim()];
-                firstServeResult = ['fault'];
-            } else {
-                firstServeElement = firstServe;
-                firstServeResult = [];
+            if (serveElement.includes('2nd serve')) {
+                let serveArr = serveElement.split('.');
+                let firstServe = serveArr[0].split(',')[0].trim();
+                let secondServe = serveArr[1].trim();
+                rangeArr = [rangeArr[0], ...rangeArr];
+                shotByArr = [shotByArr[0], ...shotByArr];
+                resultArr = ['fault', ...resultArr];
+                rallyArr = [firstServe, secondServe, ...rallyArr.slice(1)];
             }
-            
-            let restOfRally;
-            if (numberOfShots > 0 ) {
-                restOfRally = rallyArr.slice(1);
-            } else {
-                restOfRally = [];
-            }
-            
-            rallyArr = [...[firstServeElement], ...secondServe, ...restOfRally];
-            shotByArr = rangeArr.map(num => shotByArr[num-1]);
-            resultArr = [...firstServeResult, ...resultArr];
 
+          
             let shotArr = [];
             rangeArr.forEach((num, i) => {
                 let shotObj = {};
@@ -277,16 +267,18 @@ function getMatchData(link) {
                 let shotBy = shotByArr[i];
                 shotObj['shotBy'] = shotBy; 
 
-                // shot, location
-                let shot;
-                let location;
-                locationArr.forEach(locationVal => {
-                    if (rallyArr[i].includes(locationVal)) {
-                        shot = rallyArr[i].split(` ${locationVal}`)[0].trim();
-                        location = locationVal;
-                        return;
-                    };
-                });
+               let shot;
+               let location;
+               locationArr.forEach(locationVal => {
+                   if (rallyArr[i].includes(locationVal)) {
+                       location = locationVal;
+                       shot = rallyArr[i].split(` ${locationVal}`)[0].trim();
+                       return;
+                   };
+               });
+               shot = shot || rallyArr[i].split('(')[0].trim() || rallyArr[i].split(',')[0].trim();
+               location = location || 'none';
+
                 shotObj['shot'] = shot;
                 shotObj['location'] = location;
 
@@ -306,61 +298,15 @@ function getMatchData(link) {
    
         });
         matchObj['points'] = pointArr;
-        //console.log(matchData.points[0]);
 
         return matchObj;
     
     })
-    .catch(err => console.log(err));
+    .catch(err => {
+        return matchObj;
+    });
 
-    //return matchData;
 }
-//const matchLink = 'http://www.tennisabstract.com/charting/20190714-M-Wimbledon-F-Roger_Federer-Novak_Djokovic.html';
-//const matchLink = 'http://www.tennisabstract.com/charting/20200226-M-Santiago-R16-Alejandro_Tabilo-Casper_Ruud.html';
-//const matchLink = 'http://www.tennisabstract.com/charting/20200213-W-Hua_Hin-R16-Patricia_Maria_Tig-Xiaodi_You.html';
-//getMatchData(matchLink)
-//.then(matchObj => {
-//    console.log(matchObj);
-//});
-
-//matchesSite()
-//.then(matches => {
-//    matches.slice(0,1).forEach(match => {
-//        getMatchData(match)
-//        //.then(matchData => console.log(matchData))
-//        .then()
-//        .catch(err => console.log(`${err.message}: ${match.path}`))
-//    })
-//})
-
-//let link = 'http://www.tennisabstract.com/charting/20150610-M-s%C2%A0Hertogenbosch-R16-Vasek_Pospisil-Gilles_Muller.html';
-//let link = 'http://www.tennisabstract.com/charting/20190919-M-St_Petersburg-R16-Evgeny_Donskoy-Daniil_Medvedev.html'; 
-//getMatchData(link)
-//.then(matchData => {
-//    const newMatch = new Match(matchData);
-//    newMatch.save((error) => {
-//        if (error) {
-//            console.log(error);
-//        } else {
-//            console.log('Added match');
-//        }
-//    })
-//})
-
-//matchesSite()
-//.then(matches => {
-//    matches.slice(0,1).forEach(match => {
-//        getMatchData(match)
-//        .then(data => {
-//            console.log(data)
-//        //   Match.create(data)
-//        //   .then(newMatch => console.log('match added'))
-//        //   .catch(err => console.log(err))
-//        })
-//        .catch(err => {console.log(err)})
-//    })
-//})
-
 
 
 function getSide(pointScore) {
@@ -395,5 +341,7 @@ function getSide(pointScore) {
 }
 
 module.exports = {
+    matchesSite,
+    matchesDB,
     getMatchData
 }
