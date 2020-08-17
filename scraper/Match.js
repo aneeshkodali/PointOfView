@@ -99,10 +99,12 @@ function getMatchData(link) {
         const pointlog = $.html().split('var pointlog = ')[1].split(";\n")[0];
         const pointData = cheerio.load(pointlog);
         let pointNumber=1;
+        let pointInGame=1;
         pointData('tbody tr').slice(1).each((index, tr) => {
 
             const server = unidecode($(pointData(tr).find('td')[0]).text().trim());
             if (server === '') {
+                pointInGame=1;
                 return;
             }
             let pointObj = {};
@@ -121,153 +123,182 @@ function getMatchData(link) {
             // set score
             const setScore = unidecode($(pointData(tr).find('td')[1]).text().trim());
             pointObj['setScore'] = setScore;
-            //const setScoreSplit = setScore.split('-').map(score => Number(score));
-            //const setScoreServer = setScoreSplit[0];
-            //pointObj['setScoreServer'] = setScoreServer;
-            //const setScoreReceiver = setScoreSplit[1];
-            //pointObj['setScoreReceiver'] = setScoreReceiver;
-            //const setScorePlayer1 = server === player1 ? setScoreServer : setScoreReceiver;
-            //pointObj['setScorePlayer1'] = setScorePlayer1;
-            //const setScorePlayer2 = server === player1 ? setScoreReceiver : setScoreServer;
-            //pointObj['setScorePlayer2'] = setScorePlayer2;
+            const setScoreSplit = setScore.split('-').map(score => Number(score));
+            const setScoreServer = setScoreSplit[0];
+            pointObj['setScoreServer'] = setScoreServer;
+            const setScoreReceiver = setScoreSplit[1];
+            pointObj['setScoreReceiver'] = setScoreReceiver;
+            const setScorePlayer1 = server === player1 ? setScoreServer : setScoreReceiver;
+            pointObj['setScorePlayer1'] = setScorePlayer1;
+            const setScorePlayer2 = server === player1 ? setScoreReceiver : setScoreServer;
+            pointObj['setScorePlayer2'] = setScorePlayer2;
+            pointObj['setInMatch'] = setScoreServer + setScoreReceiver + 1;
             
             // game score
             const gameScore = unidecode($(pointData(tr).find('td')[2]).text());
-            pointObj['gameScore'] = gameScore
+            pointObj['gameScore'] = gameScore;
+            const gameScoreSplit = gameScore.split('-').map(score => Number(score));
+            const gameScoreServer = gameScoreSplit[0];
+            pointObj['gameScoreServer'] = gameScoreServer;
+            const gameScoreReceiver = gameScoreSplit[1];
+            pointObj['gameScoreReceiver'] = gameScoreReceiver;
+            const gameScorePlayer1 = server === player1 ? gameScoreServer : gameScoreReceiver;
+            pointObj['gameScorePlayer1'] = gameScorePlayer1;
+            const gameScorePlayer2 = server === player1 ? gameScoreReceiver : gameScoreServer;
+            pointObj['gameScorePlayer2'] = gameScorePlayer2;
+            pointObj['gameInSet'] = gameScoreServer + gameScoreReceiver + 1;
 
             // point score
             const pointScore = unidecode($(pointData(tr).find('td')[3]).text());
             pointObj['pointScore'] = pointScore;
+            const pointScoreSplit = pointScore.split('-');
+            const pointScoreServer = pointScoreSplit[0];
+            pointObj['pointScoreServer'] = pointScoreServer;
+            const pointScoreReceiver = pointScoreSplit[1];
+            pointObj['pointScoreReceiver'] = pointScoreReceiver;
+            const pointScorePlayer1 = server === player1 ? pointScoreServer : pointScoreReceiver;
+            pointObj['pointScorePlayer1'] = pointScorePlayer1;
+            const pointScorePlayer2 = server === player1 ? pointScoreReceiver : pointScoreServer;
+            pointObj['pointScorePlayer2'] = pointScorePlayer2;
+
+            pointObj['pointInGame'] = pointInGame;
+            pointInGame++;
+            
+
+            
 
             // side - function of point score
             const side = getSide(pointScore);
             pointObj['side'] = side
 
 
-            //let rallyData = $(pointData(tr).find('td')[4]);
-            //let rallyArr = rallyData.text().split(';').map(shot => shot.trim());
+            let rallyData = $(pointData(tr).find('td')[4]);
+            let rallyArr = rallyData.text().split(';').map(shot => shot.trim());
             
-            //// number of shots
-            //const numberOfShots = rallyArr.length;
-            //pointObj['numberOfShots'] = numberOfShots;
+            // number of shots
+            const numberOfShots = rallyArr.length;
+            pointObj['numberOfShots'] = numberOfShots;
 
-            //// result
-            //const result = rallyData.find('b').text().trim();
-            //pointObj['result'] = result;
+            // result
+            const result = rallyData.find('b').text().trim();
+            pointObj['result'] = result;
 
-            //const loseList = ['unforced error', 'forced error', 'double fault'];
-            //const winList = ['winner', 'ace', 'service winner'];
+            const loseList = ['unforced error', 'forced error', 'double fault'];
+            const winList = ['winner', 'ace', 'service winner'];
 
-            //// rally length
-            //let rallyLength;
-            //if (loseList.includes(result)) {
-            //    rallyLength = numberOfShots-1;
-            //} else if (winList.includes(result)) {
-            //    rallyLength = numberOfShots;
-            //}
-            //pointObj['rallyLength'] = rallyLength;
+            // rally length
+            let rallyLength;
+            if (loseList.includes(result)) {
+                rallyLength = numberOfShots-1;
+            } else if (winList.includes(result)) {
+                rallyLength = numberOfShots;
+            }
+            pointObj['rallyLength'] = rallyLength;
 
             
-            //// winner
-            //let winner;
-            //if (winList.includes(result)) {
-            //    winner = numberOfShots % 2 !== 0 ? server : receiver;
-            //} else if (loseList.includes(result)) {
-            //    winner = numberOfShots % 2 !== 0 ? receiver : server;
-            //};
-            //pointObj['winner'] = winner;
+            // winner
+            let winner;
+            if (winList.includes(result)) {
+                winner = numberOfShots % 2 !== 0 ? server : receiver;
+            } else if (loseList.includes(result)) {
+                winner = numberOfShots % 2 !== 0 ? receiver : server;
+            };
+            pointObj['winner'] = winner;
 
-            //// loser
-            //const loser = winner === player1 ? player2 : player1;
-            //pointObj['loser'] = loser;
+            // loser
+            const loser = winner === player1 ? player2 : player1;
+            pointObj['loser'] = loser;
 
 
             //// SHOTS
 
-            //const locationArr = ['down the T', 'to body', 'wide', 'down the middle', 'crosscourt', 'inside-out', 'down the line', 'inside-in'];
-            //const splitPattern = locationArr.join('|');
+            const locationArr = ['down the T', 'to body', 'wide', 'down the middle', 'crosscourt', 'inside-out', 'down the line', 'inside-in'];
+            const splitPattern = locationArr.join('|');
 
 
 
-            //let rangeArr = Array.from(Array(numberOfShots), (_, i) => i+1);
-            //let shotByArr = rangeArr.map(num => num%2!==0 ? server : receiver);
-            //let resultArr = rangeArr.map(num => num===numberOfShots ? result : 'none');
+            let rangeArr = Array.from(Array(numberOfShots), (_, i) => i+1);
+            let shotByArr = rangeArr.map(num => num%2!==0 ? server : receiver);
+            let resultArr = rangeArr.map(num => num===numberOfShots ? result : 'none');
 
-            //// Check if there is a 2nd serve
-            //let serveElement = rallyArr[0];
-            //let firstServe;
-            //let secondServe;
-            //if (serveElement.includes('.')) {
-            //    let serves = serveElement.split('. ');
-            //    firstServe = serves[0];
-            //    secondServe = [serves[1]];
-            //    rangeArr.splice(0, 0, 1);
-            //} else {
-            //    firstServe = serveElement;
-            //    secondServe = [];
-            //};
+
+            // Check if there is a 2nd serve
+            let serveElement = rallyArr[0];
+            let firstServe;
+            let secondServe;
+            if (serveElement.includes('.')) {
+                let serves = serveElement.split('.');
+                firstServe = serves[0];
+                secondServe = [serves[1]];
+                rangeArr.splice(0, 0, 1);
+            } else {
+                firstServe = serveElement;
+                secondServe = [];
+            };
         
-            ////Check if 1st serve is fault
-            //let firstServeElement;
-            //let firstServeResult;
-            //if (firstServe.includes(',')) {
-            //    let firstServeArr = firstServe.split(', ');
-            //    firstServeElement = firstServeArr[0];
-            //    //firstServeResult = [firstServeArr[1].trim()];
-            //    firstServeResult = ['fault'];
-            //} else {
-            //    firstServeElement = firstServe;
-            //    firstServeResult = [];
-            //}
+            //Check if 1st serve is fault
+            let firstServeElement;
+            let firstServeResult;
+            if (secondServe !== []) {
+           
+                let firstServeArr = firstServe.split(',');
+                firstServeElement = firstServeArr[0];
+                //firstServeResult = [firstServeArr[1].trim()];
+                firstServeResult = ['fault'];
+            } else {
+                firstServeElement = firstServe;
+                firstServeResult = [];
+            }
             
-            //let restOfRally;
-            //if (numberOfShots > 0 ) {
-            //    restOfRally = rallyArr.slice(1);
-            //} else {
-            //    restOfRally = [];
-            //}
+            let restOfRally;
+            if (numberOfShots > 0 ) {
+                restOfRally = rallyArr.slice(1);
+            } else {
+                restOfRally = [];
+            }
             
-            //rallyArr = [...[firstServeElement], ...secondServe, ...restOfRally];
-            //shotByArr = rangeArr.map(num => shotByArr[num-1]);
-            //resultArr = [...firstServeResult, ...resultArr];
+            rallyArr = [...[firstServeElement], ...secondServe, ...restOfRally];
+            shotByArr = rangeArr.map(num => shotByArr[num-1]);
+            resultArr = [...firstServeResult, ...resultArr];
 
-            //let shotArr = [];
-            //rangeArr.forEach((num, i, rangeArr) => {
-            //    let shotObj = {};
+            let shotArr = [];
+            rangeArr.forEach((num, i) => {
+                let shotObj = {};
 
-            //    // shot number
-            //    let shotNumber = num;
-            //    shotObj['shotNumber'] = shotNumber;
+                // shot number
+                let shotNumber = num;
+                shotObj['shotNumber'] = shotNumber;
 
-            //    // shot number with serve
-            //    let shotNumberWithServe = i+1;
-            //    shotObj['shotNumberWithServe'] = shotNumberWithServe;
+                // shot number with serve
+                let shotNumberWithServe = i+1;
+                shotObj['shotNumberWithServe'] = shotNumberWithServe;
 
-            //    // shot by
-            //    let shotBy = shotByArr[i];
-            //    shotObj['shotBy'] = shotBy; 
+                // shot by
+                let shotBy = shotByArr[i];
+                shotObj['shotBy'] = shotBy; 
 
-            //    // shot, location
-            //    let shot;
-            //    let location;
-            //    locationArr.forEach(locationVal => {
-            //        if (rallyArr[i].includes(locationVal)) {
-            //            shot = rallyArr[i].split(` ${locationVal}`)[0].trim();
-            //            location = locationVal;
-            //        }
-            //    });
-            //    shotObj['shot'] = shot;
-            //    shotObj['location'] = location;
+                // shot, location
+                let shot;
+                let location;
+                locationArr.forEach(locationVal => {
+                    if (rallyArr[i].includes(locationVal)) {
+                        shot = rallyArr[i].split(` ${locationVal}`)[0].trim();
+                        location = locationVal;
+                        return;
+                    };
+                });
+                shotObj['shot'] = shot;
+                shotObj['location'] = location;
 
-            //    // result
-            //    let result = resultArr[i];
-            //    shotObj['result'] = result;
+                // result
+                let shotResult = resultArr[i];
+                shotObj['result'] = shotResult;
 
         
 
-            //    shotArr.push(shotObj);
-            //});
-            //pointObj['shots'] = shotArr;
+                shotArr.push(shotObj);
+            });
+            pointObj['shots'] = shotArr;
 
         
             pointArr.push(pointObj);
