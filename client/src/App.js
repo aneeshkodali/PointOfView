@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import AppNavbar from './components/AppNavbar';
+import Header from './components/Header';
 import Matches from './components/Matches';
 
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -10,6 +11,7 @@ class App extends Component {
     return (
       <div className="App">
         <AppNavbar />
+        <Header />
         <Matches />
       </div>
     )
